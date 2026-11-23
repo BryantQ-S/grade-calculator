@@ -1,0 +1,54 @@
+pipeline {
+  agent any
+  parameters {
+    string(name: 'CI_BUILD_NUMBER', defaultValue: '', description: 'Build number of the main-branch CI job to deploy')
+    choice(name: 'ENVIRONMENT', choices: ['DEV', 'TEST', 'ACC', 'PROD'], description: 'Where to deploy')
+  }
+  stages {
+    stage('Validate') {
+      steps {
+        script {
+          if (!params.CI_BUILD_NUMBER?.trim()) {
+            error('CI_BUILD_NUMBER is empty. Expected on the very first run. Refresh the page and use Build with Parameters.')
+          }
+        }
+      }
+    }
+    stage('Download Artifact') {
+      steps {
+        echo "Deploying CI build ${params.CI_BUILD_NUMBER} to ${params.ENVIRONMENT}"
+        copyArtifacts(
+          projectName: 'GradeCalc-CI/main',
+          selector: specific(params.CI_BUILD_NUMBER),
+          filter: "react-app-${params.CI_BUILD_NUMBER}.tar.gz"
+        )
+      }
+    }
+    stage('Prepare Files') {
+      steps {
+        sh 'rm -rf deploy && mkdir deploy'
+        sh "tar -xzf react-app-${params.CI_BUILD_NUMBER}.tar.gz -C deploy"
+      }
+    }
+    stage('Build Docker Image') {
+      steps {
+        script {
+          def envName = params.ENVIRONMENT.toLowerCase()
+          sh "docker build -t grade-app-${envName}:${params.CI_BUILD_NUMBER} deploy"
+        }
+      }
+    }
+    stage('Deploy to Docker') {
+      steps {
+        script {
+          def ports = [DEV: '8081', TEST: '8082', ACC: '8083', PROD: '8084']
+          def envName = params.ENVIRONMENT.toLowerCase()
+          def port = ports[params.ENVIRONMENT]
+          sh "docker rm -f grade-${envName} || true"
+          sh "docker run -d --name grade-${envName} -p ${port}:80 grade-app-${envName}:${params.CI_BUILD_NUMBER}"
+          echo "CI build ${params.CI_BUILD_NUMBER} is running in ${params.ENVIRONMENT}. Open http://localhost:${port}"
+        }
+      }
+    }
+  }
+}
