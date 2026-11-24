@@ -1,11 +1,7 @@
-pipeline {
+﻿pipeline {
     agent any
 
     tools { nodejs 'NodeJS-24' }
-
-    options {
-        copyArtifactPermission('*')
-    }
 
     environment {
         SONAR_SCANNER_HOME = tool 'SonarScanner'
