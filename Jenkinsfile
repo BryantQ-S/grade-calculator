@@ -7,7 +7,6 @@ pipeline {
       steps {
         checkout scm
         script {
-          properties([copyArtifactPermission('CD-React-App')])
         }
       }
     }
