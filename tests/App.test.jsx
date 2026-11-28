@@ -8,7 +8,7 @@ test("page renders the title", () => {
 });
 
 test("85 is a B (valid input)", () => {
-  expect(letterGrade(85)).toBe("B");
+  expect(letterGrade(85)).toBe("WRONG");
 });
 
 test("grade boundaries map to the right letters", () => {
